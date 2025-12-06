@@ -80,7 +80,7 @@ var worker_default = {
       // 【修改 1C】更新 KV Key
       const KV_KEY = `LINK.${subKey}.txt`; // <--- 使用 subKey 作为 KV Key 的一部分
       if (env.KV) {
-        await \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, "LINK.txt", KV_KEY); // <--- 传入新的 KV Key
+        await \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, "LINK.txt", KV_KEY); // 从旧的 "LINK.txt" 迁移
         if (userAgent.includes("mozilla") && !url.search) {
           await sendMessage(`#\u7F16\u8F91\u8BA2\u9605 ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
 \u57DF\u540D: ${url.hostname}
