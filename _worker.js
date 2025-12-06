@@ -445,12 +445,12 @@ function isValidBase64(str) {
   return base64Regex.test(cleanStr);
 }
 __name(isValidBase64, "isValidBase64");
-async function \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, txt = "ADD.txt") {
-  const \u65E7\u6570\u636E = await env.KV.get(`/${txt}`);
-  const \u65B0\u6570\u636E = await env.KV.get(txt);
-  if (\u65E7\u6570\u636E && !\u65B0\u6570\u636E) {
-    await env.KV.put(txt, \u65E7\u6570\u636E);
-    await env.KV.delete(`/${txt}`);
+async function \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, oldKey, newKey) {
+  const oldData = await env.KV.get(oldKey);
+  const newData = await env.KV.get(newKey);
+  if (oldData && !newData) {
+    await env.KV.put(newKey, oldData);
+    await env.KV.delete(oldKey);
     return true;
   }
   return false;
