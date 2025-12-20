@@ -1,8 +1,7 @@
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-
-// _worker.js
+// _worker.js whua
 var mytoken = "auto";
 var guestToken = "";
 var BotToken = "";
