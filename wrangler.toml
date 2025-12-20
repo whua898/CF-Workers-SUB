@@ -6,3 +6,7 @@ keep_vars = true
 [[kv_namespaces]]
 binding = "KV"			                    #KV绑定名默认不可修改
 id = "91745742191d44ea8cf33403dfcf96d2"		#KV据库id
+
+# 添加一些额外的配置以增强兼容性
+compatibility_flags = []
+workers_dev = true
