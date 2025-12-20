@@ -390,6 +390,7 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
     for (const response of modifiedResponses) {
       if (response.status === "fulfilled") {
         const content = await response.value || "null";
+        console.log(`[DEBUG] Fetched ${response.apiUrl}: Length=${content.length}`);
         if (content.includes("proxies:")) {
           \u8BA2\u9605\u8F6C\u6362URLs += "|" + response.apiUrl;
         } else if (content.includes('outbounds"') && content.includes('inbounds"')) {
