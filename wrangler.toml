@@ -1,5 +1,5 @@
 name = "cf-subs"
-main = "_worker.mjs"
+main = "_worker.js"
 compatibility_date = "2025-07-23"
 keep_vars = true
 
