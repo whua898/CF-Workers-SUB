@@ -12,8 +12,6 @@ var SUBUpdateTime = 6;
 var total = 99;
 var timestamp = 41023296e5;
 var MainData = ``;
-
-`;
 var urls = [];
 var subConverter = "SUBAPI.cmliussss.net";
 var subConfig = "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini";
