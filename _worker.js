@@ -357,9 +357,9 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
   const controller = new AbortController();
   const timeout = setTimeout(() => {
     controller.abort();
-  }, 2e3);
+  }, 5000);
   try {
-    const responses = await Promise.allSettled(api.map((apiUrl) => getUrl(request, apiUrl, \u8FFD\u52A0UA, userAgentHeader).then((response) => response.ok ? response.text() : Promise.reject(response))));
+    const responses = await Promise.allSettled(api.map((apiUrl) => getUrl(request, apiUrl, \u8FFD\u52A0UA, userAgentHeader, controller.signal).then((response) => response.ok ? response.text() : Promise.reject(response))));
     const modifiedResponses = responses.map((response, index) => {
       if (response.status === "rejected") {
         const reason = response.reason;
@@ -416,7 +416,7 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
   return [\u8BA2\u9605\u5185\u5BB9, \u8BA2\u9605\u8F6C\u6362URLs];
 }
 __name(getSUB, "getSUB");
-async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader) {
+async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader, signal) {
   const newHeaders = new Headers(request.headers);
   newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${\u8FFD\u52A0UA}(${userAgentHeader})`);
   const modifiedRequest = new Request(targetUrl, {
@@ -424,6 +424,7 @@ async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader) {
     headers: newHeaders,
     body: request.method === "GET" ? null : request.body,
     redirect: "follow",
+    signal: signal,
     cf: {
       // 忽略SSL证书验证
       insecureSkipVerify: true,
@@ -442,7 +443,7 @@ async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader) {
 __name(getUrl, "getUrl");
 function isValidBase64(str) {
   const cleanStr = str.replace(/\s/g, "");
-  const base64Regex = /^[A-Za-z0-9+/=]+$/;
+  const base64Regex = /^[A-Za-z0-9+/=\-_]+$/;
   return base64Regex.test(cleanStr);
 }
 __name(isValidBase64, "isValidBase64");
