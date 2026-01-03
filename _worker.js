@@ -186,7 +186,11 @@ var worker_default = {
       const responseHeaders = {
         "content-type": "text/plain; charset=utf-8",
         "Profile-Update-Interval": `${SUBUpdateTime}`,
-        "Profile-web-page-url": request.url.includes("?") ? request.url.split("?")[0] : request.url
+        "Profile-web-page-url": request.url.includes("?") ? request.url.split("?")[0] : request.url,
+        "X-Debug-SubKey": subKey,
+        "X-Debug-KV-Key": KV_KEY,
+        "X-Debug-MainData-Length": `${MainData ? MainData.length : 0}`,
+        "X-Debug-Result-Length": `${result ? result.length : 0}`
         //"Subscription-Userinfo": `upload=${UD}; download=${UD}; total=${total}; expire=${expire}`,
       };
       if (\u8BA2\u9605\u683C\u5F0F == "base64" || token == fakeToken) {
@@ -425,7 +429,9 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
 __name(getSUB, "getSUB");
 async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader, signal) {
   const newHeaders = new Headers(request.headers);
-  newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${\u8FFD\u52A0UA}${userAgentHeader ? "(" + userAgentHeader + ")" : ""}`);
+  // 【修改 5】移除 User-Agent 中的中文，防止 403 错误
+  newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${encodeURIComponent(\u8FFD\u52A0UA)}${userAgentHeader ? "(" + userAgentHeader + ")" : ""}`);
+
   const modifiedRequest = new Request(targetUrl, {
     method: request.method,
     headers: newHeaders,
