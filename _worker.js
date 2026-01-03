@@ -429,8 +429,8 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
 __name(getSUB, "getSUB");
 async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader, signal) {
   const newHeaders = new Headers(request.headers);
-  // 【修改 5】移除 User-Agent 中的中文，防止 403 错误
-  newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${encodeURIComponent(\u8FFD\u52A0UA)}${userAgentHeader ? "(" + userAgentHeader + ")" : ""}`);
+  // 【修改 6】将 User-Agent 固定为标准的 v2rayN User-Agent
+  newHeaders.set("User-Agent", "v2rayN/6.45");
 
   const modifiedRequest = new Request(targetUrl, {
     method: request.method,
