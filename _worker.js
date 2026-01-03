@@ -2,22 +2,32 @@ var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
 // _worker.js whua
-var mytoken = "auto";
-var guestToken = "";
-var BotToken = "";
-var ChatID = "";
-var TG = 0;
-var FileName = "CF-Workers-SUB";
-var SUBUpdateTime = 6;
-var total = 99;
-var timestamp = 41023296e5;
-var MainData = ``;
-var urls = [];
-var subConverter = "SUBAPI.cmliussss.net";
-var subConfig = "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini";
-var subProtocol = "https";
 var worker_default = {
   async fetch(request, env) {
+    let mytoken = env.TOKEN || "auto";
+    let guestToken = env.GUESTTOKEN || env.GUEST || "";
+    let BotToken = env.TGTOKEN || "";
+    let ChatID = env.TGID || "";
+    let TG = env.TG || 0;
+    let FileName = env.SUBNAME || "CF-Workers-SUB";
+    let SUBUpdateTime = env.SUBUPTIME || 6;
+    let total = 99;
+    let timestamp = 41023296e5;
+    
+    let subConverter = env.SUBAPI || "SUBAPI.cmliussss.net";
+    let subConfig = env.SUBCONFIG || "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini";
+    let subProtocol = "https";
+    
+    if (subConverter.includes("http://")) {
+      subConverter = subConverter.split("//")[1];
+      subProtocol = "http";
+    } else {
+      subConverter = subConverter.split("//")[1] || subConverter;
+    }
+    
+    let MainData = "";
+    let urls = [];
+    
     const userAgentHeader = request.headers.get("User-Agent");
     const userAgent = userAgentHeader ? userAgentHeader.toLowerCase() : "null";
     const url = new URL(request.url);
@@ -36,36 +46,21 @@ var worker_default = {
     }
     // End 【修改 1A】
     
-    mytoken = env.TOKEN || mytoken;
-    BotToken = env.TGTOKEN || BotToken;
-    ChatID = env.TGID || ChatID;
-    TG = env.TG || TG;
-    subConverter = env.SUBAPI || subConverter;
-    if (subConverter.includes("http://")) {
-      subConverter = subConverter.split("//")[1];
-      subProtocol = "http";
-    } else {
-      subConverter = subConverter.split("//")[1] || subConverter;
-    }
-    subConfig = env.SUBCONFIG || subConfig;
-    FileName = env.SUBNAME || FileName;
     const currentDate = /* @__PURE__ */ new Date();
     currentDate.setHours(0, 0, 0, 0);
     const timeTemp = Math.ceil(currentDate.getTime() / 1e3);
     const fakeToken = await MD5MD5(`${mytoken}${timeTemp}`);
-    guestToken = env.GUESTTOKEN || env.GUEST || guestToken;
     if (!guestToken) guestToken = await MD5MD5(mytoken);
     const \u8BBF\u5BA2\u8BA2\u9605 = guestToken;
     let UD = Math.floor((timestamp - Date.now()) / timestamp * total * 1099511627776 / 2);
     total = total * 1099511627776;
     let expire = Math.floor(timestamp / 1e3);
-    SUBUpdateTime = env.SUBUPTIME || SUBUpdateTime;
     
     // 【修改 1B】更新权限判断
     if (!([mytoken, fakeToken, \u8BBF\u5BA2\u8BA2\u9605].includes(token) || url.pathname.includes("/" + mytoken) || url.pathname.includes("/" + subKey + "/" + mytoken))) {
       if (TG == 1 && url.pathname !== "/" && url.pathname !== "/favicon.ico") await sendMessage(`#\u5F02\u5E38\u8BBF\u95EE ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
 \u57DF\u540D: ${url.hostname}
-<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`);
+<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`, BotToken, ChatID);
       if (env.URL302) return Response.redirect(env.URL302, 302);
       else if (env.URL) return await proxyURL(env.URL, url);
       else return new Response(await nginx(), {
@@ -82,10 +77,11 @@ var worker_default = {
         if (userAgent.includes("mozilla") && !url.search) {
           await sendMessage(`#\u7F16\u8F91\u8BA2\u9605 ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
 \u57DF\u540D: ${url.hostname}
-<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`);
-          return await KV(request, env, KV_KEY, \u8BBF\u5BA2\u8BA2\u9605); // <--- 传入新的 KV Key
+<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`, BotToken, ChatID);
+          return await KV(request, env, KV_KEY, \u8BBF\u5BA2\u8BA2\u9605, FileName); // <--- 传入新的 KV Key
         } else {
-          MainData = await env.KV.get(KV_KEY) || MainData; // <--- 使用新的 KV Key 读取数据
+          const kvData = await env.KV.get(KV_KEY);
+          if (kvData) MainData = kvData;
         }
       } else {
         MainData = env.LINK || MainData;
@@ -105,7 +101,7 @@ var worker_default = {
       urls = await ADD(\u8BA2\u9605\u94FE\u63A5);
       await sendMessage(`#\u83B7\u53D6\u8BA2\u9605 ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
 \u57DF\u540D: ${url.hostname}
-<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`);
+<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`, BotToken, ChatID);
       const isSubConverterRequest = request.headers.get("subconverter-request") || request.headers.get("subconverter-version") || userAgent.includes("subconverter");
       let \u8BA2\u9605\u683C\u5F0F = "base64";
       if (!(userAgent.includes("null") || isSubConverterRequest || userAgent.includes("nekobox") || userAgent.includes("CF-Workers-SUB".toLowerCase()))) {
@@ -122,7 +118,9 @@ var worker_default = {
         }
       }
       let subConverterUrl;
-      let \u8BA2\u9605\u8F6C\u6362URL = `${url.origin}/${await MD5MD5(fakeToken)}?token=${fakeToken}`;
+      // 【修改 2】修复订阅转换 URL 中的 subKey，确保 subConverter 能获取到正确的配置内容
+      let \u8BA2\u9605\u8F6C\u6362URL = `${url.origin}/${subKey}/${await MD5MD5(fakeToken)}?token=${fakeToken}`;
+      
       let req_data = MainData;
       let \u8FFD\u52A0UA = "v2rayn";
       if (url.searchParams.has("b64") || url.searchParams.has("base64")) \u8BA2\u9605\u683C\u5F0F = "base64";
@@ -136,7 +134,12 @@ var worker_default = {
         const \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9 = await getSUB(\u8BA2\u9605\u94FE\u63A5\u6570\u7EC4, request, \u8FFD\u52A0UA, userAgentHeader);
         console.log(\u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9);
         req_data += \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[0].join("\n");
-        \u8BA2\u9605\u8F6C\u6362URL += "|" + \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1];
+        
+        // 【修改 3】修复订阅转换 URL 拼接问题，避免出现 || 或 | 开头
+        if (\u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1].length > 0) {
+            \u8BA2\u9605\u8F6C\u6362URL += "|" + \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1];
+        }
+        
         if (\u8BA2\u9605\u683C\u5F0F == "base64" && !isSubConverterRequest && \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1].includes("://")) {
           subConverterUrl = `${subProtocol}://${subConverter}/sub?target=mixed&url=${encodeURIComponent(\u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1])}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
           try {
@@ -213,6 +216,7 @@ var worker_default = {
   }
 };
 async function ADD(envadd) {
+  if (!envadd) return [];
   var addtext = envadd.replace(/[	"'|\r\n]+/g, "\n").replace(/\n+/g, "\n");
   if (addtext.charAt(0) == "\n") addtext = addtext.slice(1);
   if (addtext.charAt(addtext.length - 1) == "\n") addtext = addtext.slice(0, addtext.length - 1);
@@ -251,7 +255,7 @@ async function nginx() {
   return text;
 }
 __name(nginx, "nginx");
-async function sendMessage(type, ip, add_data = "") {
+async function sendMessage(type, ip, add_data = "", BotToken, ChatID) {
   if (BotToken !== "" && ChatID !== "") {
     let msg = "";
     const response = await fetch(`http://ip-api.com/json/${ip}?lang=zh-CN`);
@@ -353,9 +357,10 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
   let \u8BA2\u9605\u8F6C\u6362URLs = "";
   let \u5F02\u5E38\u8BA2\u9605 = "";
   const controller = new AbortController();
+  // 【修改 3】增加超时时间到 30 秒，防止订阅拉取超时导致空白
   const timeout = setTimeout(() => {
     controller.abort();
-  }, 5000);
+  }, 30000);
   try {
     const responses = await Promise.allSettled(api.map((apiUrl) => getUrl(request, apiUrl, \u8FFD\u52A0UA, userAgentHeader, controller.signal).then((response) => response.ok ? response.text() : Promise.reject(response))));
     const modifiedResponses = responses.map((response, index) => {
@@ -411,12 +416,16 @@ async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
     clearTimeout(timeout);
   }
   const \u8BA2\u9605\u5185\u5BB9 = await ADD(newapi + \u5F02\u5E38\u8BA2\u9605);
+  // 【修改 4】清理订阅转换 URL 的前导 |，防止 subConverter 解析错误
+  if (\u8BA2\u9605\u8F6C\u6362URLs.startsWith("|")) {
+    \u8BA2\u9605\u8F6C\u6362URLs = \u8BA2\u9605\u8F6C\u6362URLs.slice(1);
+  }
   return [\u8BA2\u9605\u5185\u5BB9, \u8BA2\u9605\u8F6C\u6362URLs];
 }
 __name(getSUB, "getSUB");
 async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader, signal) {
   const newHeaders = new Headers(request.headers);
-  newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${\u8FFD\u52A0UA}(${userAgentHeader})`);
+  newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${\u8FFD\u52A0UA}${userAgentHeader ? "(" + userAgentHeader + ")" : ""}`);
   const modifiedRequest = new Request(targetUrl, {
     method: request.method,
     headers: newHeaders,
@@ -456,7 +465,7 @@ async function \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, oldKey, newKey) {
   return false;
 }
 __name(\u8FC1\u79FB\u5730\u5740\u5217\u8868, "\u8FC1\u79FB\u5730\u5740\u5217\u8868");
-async function KV(request, env, txt, guest) {
+async function KV(request, env, txt, guest, FileName) {
   const url = new URL(request.url);
   const mytoken = env.TOKEN || "auto"; // 【新增】获取 mytoken
   const subKey = txt.split('.')[1] || 'main'; // 【新增】获取当前配置名
@@ -604,8 +613,8 @@ async function KV(request, env, txt, guest) {
           ################################################################<br>
           \u8BA2\u9605\u8F6C\u6362\u914D\u7F6E<br>
           ---------------------------------------------------------------<br>
-          SUBAPI\uFF08\u8BA2\u9605\u8F6C\u6362\u540E\u7AEF\uFF09: <strong>${subProtocol}://${subConverter}</strong><br>
-          SUBCONFIG\uFF08\u8BA2\u9605\u8F6C\u6362\u914D\u7F6E\u6587\u4EF6\uFF09: <strong>${subConfig}</strong><br>
+          SUBAPI\uFF08\u8BA2\u9605\u8F6C\u6362\u540E\u7AEF\uFF09: <strong>${env.SUBAPI || "SUBAPI.cmliussss.net"}</strong><br>
+          SUBCONFIG\uFF08\u8BA2\u9605\u8F6C\u6362\u914D\u7F6E\u6587\u4EF6\uFF09: <strong>${env.SUBCONFIG || "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini"}</strong><br>
           ---------------------------------------------------------------<br>
           ################################################################<br>
           CF-Workers-SUB \u6C47\u805A\u8BA2\u9605\u7F16\u8F91: 
