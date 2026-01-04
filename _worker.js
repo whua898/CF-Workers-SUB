@@ -474,9 +474,18 @@ async function KV(request, env, txt, guest) {
     }
     let content = "";
     let hasKV = !!env.KV;
+    let subKeyList = [];
     if (hasKV) {
       try {
         content = await env.KV.get(txt) || "";
+        // 【新增】获取所有配置列表
+        const list = await env.KV.list({ prefix: "LINK." });
+        for (const key of list.keys) {
+            const parts = key.name.split('.');
+            if (parts.length === 3 && parts[0] === 'LINK' && parts[2] === 'txt') {
+                subKeyList.push(parts[1]);
+            }
+        }
       } catch (error) {
         console.error("\u8BFB\u53D6KV\u65F6\u53D1\u751F\u9519\u8BEF:", error);
         content = "\u8BFB\u53D6\u6570\u636E\u65F6\u53D1\u751F\u9519\u8BEF: " + error.message;
@@ -555,6 +564,11 @@ async function KV(request, env, txt, guest) {
           <input type="text" id="configNameInput" value="${subKey}" style="border: 1px solid #ccc; padding: 5px; width: 150px; display: inline-block;">
           <button class="back-btn" onclick="goToConfig()" style="display: inline-block; padding: 6px 15px; margin-left: 10px; background: #6a11cb; color: white;">\u8FDB\u5165\u914D\u7F6E</button>
           <br>
+          <!-- 【新增：已有配置列表】 -->
+          <div id="configList" style="margin-top: 10px;">
+              \u5DF2\u6709\u914D\u7F6E: 
+              ${subKeyList.map(k => `<span onclick="setConfig('${k}')" style="cursor:pointer; color:blue; text-decoration:underline; margin-right:10px;">${k}</span>`).join('')}
+          </div>
           ---------------------------------------------------------------<br>
 
           \u81EA\u9002\u5E94\u8BA2\u9605\u5730\u5740:<br>
@@ -644,6 +658,12 @@ async function KV(request, env, txt, guest) {
               } else {
                   alert('\u914D\u7F6E\u540D\u79F0\u672A\u6539\u53D8\uFF0C\u65E0\u9700\u8FDB\u5165');
               }
+          }
+          
+          // 【新增】点击配置名称时自动填充并跳转
+          function setConfig(name) {
+              document.getElementById('configNameInput').value = name;
+              goToConfig();
           }
           
           function copyToClipboard(text, qrcode) {
