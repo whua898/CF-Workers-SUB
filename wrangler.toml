@@ -12,7 +12,7 @@ binding = "KV"			                    #KV绑定名默认不可修改
 id = "91745742191d44ea8cf33403dfcf96d2"		#KV据库id
 
 [vars]
-SUBAPI = "SUBAPI.cmliussss.net"
+SUBAPI = "subconverter.wh8.xx.kg"
 SUBCONFIG = "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini"
 TOKEN = "wh898"
 
