@@ -16,6 +16,62 @@ var urls = [];
 var subConverter = "subconverter.wh8.xx.kg"; //【修改】默认后端改为你的
 var subConfig = "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini";
 var subProtocol = "https";
+
+// 判断是否为IP地址的正则表达式
+function isIpAddress(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    // 简单检查是否为IP地址格式
+    const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    return ipRegex.test(hostname);
+  } catch (e) {
+    return false;
+  }
+}
+__name(isIpAddress, "isIpAddress");
+
+// 从URL获取内容
+async function getSUB(urls) {
+  const results = [];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const content = await response.text();
+        results.push(content);
+      } else {
+        console.error(`Failed to fetch: ${url}, status: ${response.status}`);
+      }
+    } catch (error) {
+      console.error(`Error fetching URL: ${url}`, error);
+    }
+  }
+  return results.join('\n');
+}
+__name(getSUB, "getSUB");
+
+// 通过subconverter获取GCP节点内容
+async function getGCPNodes(gcpUrls) {
+  if (gcpUrls.length === 0) return '';
+
+  const combinedUrl = gcpUrls.join('|');
+  const subconverterUrl = `${subProtocol}://${subConverter}/sub?target=mixed&url=${encodeURIComponent(combinedUrl)}&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
+
+  try {
+    const response = await fetch(subconverterUrl);
+    if (response.ok) {
+      return await response.text();
+    } else {
+      console.error(`Failed to fetch from subconverter: ${subconverterUrl}, status: ${response.status}`);
+      return '';
+    }
+  } catch (error) {
+    console.error('Error fetching from subconverter:', error);
+    return '';
+  }
+}
+__name(getGCPNodes, "getGCPNodes");
+
 var worker_default = {
   async fetch(request, env) {
     const userAgentHeader = request.headers.get("User-Agent");
@@ -88,13 +144,66 @@ var worker_default = {
         if (env.LINKSUB) urls = await ADD(env.LINKSUB);
       }
       
-      // 【修改】将所有链接（包括MainData和urls）合并为一个大的url参数
+      // 【修改】将所有链接（包括MainData和urls）合并
       const allLinks = (await ADD(MainData + "\n" + urls.join("\n"))).filter(link => link.trim() !== "");
-      const combinedUrl = allLinks.join("|");
-
+      
+      // 分类链接：IP地址链接（GCP节点）和域名链接（HF节点）
+      const ipLinks = [];
+      const domainLinks = [];
+      
+      for (const link of allLinks) {
+        if (isIpAddress(link)) {
+          ipLinks.push(link);
+        } else {
+          domainLinks.push(link);
+        }
+      }
+      
+      console.log(`IP links: ${ipLinks.length}, Domain links: ${domainLinks.length}`);
+      
+      // 并行获取不同类型的链接内容
+      let ipContent = '';
+      let domainContent = '';
+      
+      if (ipLinks.length > 0) {
+        console.log('Fetching IP links via subconverter:', ipLinks);
+        ipContent = await getGCPNodes(ipLinks);
+      }
+      
+      if (domainLinks.length > 0) {
+        console.log('Fetching domain links directly:', domainLinks);
+        domainContent = await getSUB(domainLinks);
+      }
+      
+      // 合并所有内容
+      let fullContent = '';
+      if (domainContent) fullContent += domainContent;
+      if (ipContent) {
+        if (fullContent) fullContent += '\n';
+        fullContent += ipContent;
+      }
+      
+      console.log(`Combined content length: ${fullContent.length}`);
+      
       let targetClient = "clash"; // 默认转换成clash
       if (url.searchParams.has("b64") || url.searchParams.has("base64")) {
-        targetClient = "mixed"; // 如果是b64，则使用mixed，让subconverter返回base64
+        // 如果是b64，直接返回base64编码的内容
+        const base64Content = btoa(encodeURIComponent(fullContent).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+          return String.fromCharCode('0x' + p1);
+        }));
+        
+        const newHeaders = new Headers();
+        newHeaders.set("Content-Type", "text/plain; charset=utf-8");
+        // 【修改】根据User-Agent判断是否添加Content-Disposition
+        if (!userAgent.includes("mozilla")) {
+          newHeaders.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(FileName)}.txt`);
+        }
+        newHeaders.set("profile-update-interval", `${SUBUpdateTime}`);
+        newHeaders.set("profile-web-page-url", request.url);
+        
+        return new Response(base64Content, {
+          headers: newHeaders
+        });
       } else if (url.searchParams.has("clash")) {
         targetClient = "clash";
       } else if (url.searchParams.has("singbox") || url.searchParams.has("sb")) {
@@ -116,43 +225,49 @@ var worker_default = {
       } else if (userAgent.includes("loon")) {
         targetClient = "loon";
       } else {
-        targetClient = "mixed"; // 默认或无法识别时，返回base64
+        // 对于非b64格式，将完整内容发送给subconverter进行格式转换
+        targetClient = "clash";
       }
-
-      // 【修改】构造指向subconverter的最终URL
-      let finalSubUrl = `${subProtocol}://${subConverter}/sub?target=${targetClient}&url=${encodeURIComponent(combinedUrl)}&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
       
-      // 传递其他高级参数
-      if (url.searchParams.get("exclude")) finalSubUrl += "&exclude=" + url.searchParams.get("exclude");
-      if (url.searchParams.get("include")) finalSubUrl += "&include=" + url.searchParams.get("include");
-      if (url.searchParams.get("filename")) finalSubUrl += "&filename=" + url.searchParams.get("filename");
-      if (url.searchParams.get("rename")) finalSubUrl += "&rename=" + url.searchParams.get("rename");
-      // ... 其他你希望透传的参数
-
-      console.log("Final Subconverter URL:", finalSubUrl);
-
-      // 【修改】直接请求最终的subconverter链接
-      const response = await fetch(finalSubUrl, {
-        headers: {
-          "User-Agent": userAgentHeader
+      // 如果不是base64请求，将合并的内容发送给subconverter进行格式转换
+      if (url.searchParams.has("b64") || url.searchParams.has("base64")) {
+        // 已经在上面处理了base64情况
+      } else {
+        // 使用POST方式将内容发送给subconverter进行转换
+        let subconverterUrl = `${subProtocol}://${subConverter}/sub?target=${targetClient}&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
+        
+        // 传递其他高级参数
+        if (url.searchParams.get("exclude")) subconverterUrl += "&exclude=" + url.searchParams.get("exclude");
+        if (url.searchParams.get("include")) subconverterUrl += "&include=" + url.searchParams.get("include");
+        if (url.searchParams.get("filename")) subconverterUrl += "&filename=" + url.searchParams.get("filename");
+        if (url.searchParams.get("rename")) subconverterUrl += "&rename=" + url.searchParams.get("rename");
+        
+        console.log("Subconverter POST URL:", subconverterUrl);
+        
+        // 发送POST请求到subconverter
+        const response = await fetch(subconverterUrl, {
+          method: 'POST',
+          body: fullContent,
+          headers: {
+            "Content-Type": "text/plain",
+            "User-Agent": userAgentHeader
+          }
+        });
+        
+        const newHeaders = new Headers(response.headers);
+        // 【修改】根据User-Agent判断是否添加Content-Disposition
+        if (!userAgent.includes("mozilla")) {
+          newHeaders.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(FileName)}`);
         }
-      });
-
-      const newHeaders = new Headers(response.headers);
-      // 【修改】根据User-Agent判断是否添加Content-Disposition
-      // 如果是浏览器请求，则不添加content-disposition头，直接显示内容
-      // 如果是其他客户端请求，则添加content-disposition头，提示下载
-      if (!userAgent.includes("mozilla")) {
-        newHeaders.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(FileName)}`);
+        newHeaders.set("profile-update-interval", `${SUBUpdateTime}`);
+        newHeaders.set("profile-web-page-url", request.url);
+        
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: newHeaders
+        });
       }
-      newHeaders.set("profile-update-interval", `${SUBUpdateTime}`);
-      newHeaders.set("profile-web-page-url", request.url);
-
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers: newHeaders
-      });
     }
   }
 };
