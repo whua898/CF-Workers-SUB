@@ -139,7 +139,12 @@ var worker_default = {
       });
 
       const newHeaders = new Headers(response.headers);
-      newHeaders.set("content-disposition", `attachment; filename*=utf-8''${encodeURIComponent(FileName)}`);
+      // 【修改】根据User-Agent判断是否添加Content-Disposition
+      // 如果是浏览器请求，则不添加content-disposition头，直接显示内容
+      // 如果是其他客户端请求，则添加content-disposition头，提示下载
+      if (!userAgent.includes("mozilla")) {
+        newHeaders.set("content-disposition", `attachment; filename*=UTF-8''${encodeURIComponent(FileName)}`);
+      }
       newHeaders.set("profile-update-interval", `${SUBUpdateTime}`);
       newHeaders.set("profile-web-page-url", request.url);
 
