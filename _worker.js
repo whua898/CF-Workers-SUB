@@ -13,7 +13,7 @@ var total = 99;
 var timestamp = 41023296e5;
 var MainData = ``;
 var urls = [];
-var subConverter = "SUBAPI.cmliussss.net";
+var subConverter = "subconverter.wh8.xx.kg"; //【修改】默认后端改为你的
 var subConfig = "https://raw.githubusercontent.com/cmliu/ACL4SSR/main/Clash/config/ACL4SSR_Online_MultiCountry.ini";
 var subProtocol = "https";
 var worker_default = {
@@ -22,19 +22,17 @@ var worker_default = {
     const userAgent = userAgentHeader ? userAgentHeader.toLowerCase() : "null";
     const url = new URL(request.url);
     
-    // 【修改 1A】解析配置名称和 Token
-    const urlPath = url.pathname.split("/").filter(p => p); // [配置名, token, ...] 或 [token]
+    const urlPath = url.pathname.split("/").filter(p => p);
     let token = url.searchParams.get("token");
-    let subKey = "main"; // 默认配置名
+    let subKey = "main";
 
     if (urlPath.length === 1) {
-        token = token || urlPath[0]; // 可能是 /token
+        token = token || urlPath[0];
         subKey = "main";
     } else if (urlPath.length >= 2) {
-        subKey = urlPath[0]; // /配置名/token -> 配置名
-        token = token || urlPath[1]; // /配置名/token -> token
+        subKey = urlPath[0];
+        token = token || urlPath[1];
     }
-    // End 【修改 1A】
     
     mytoken = env.TOKEN || mytoken;
     BotToken = env.TGTOKEN || BotToken;
@@ -61,7 +59,6 @@ var worker_default = {
     let expire = Math.floor(timestamp / 1e3);
     SUBUpdateTime = env.SUBUPTIME || SUBUpdateTime;
     
-    // 【修改 1B】更新权限判断
     if (!([mytoken, fakeToken, \u8BBF\u5BA2\u8BA2\u9605].includes(token) || url.pathname.includes("/" + mytoken) || url.pathname.includes("/" + subKey + "/" + mytoken))) {
       if (TG == 1 && url.pathname !== "/" && url.pathname !== "/favicon.ico") await sendMessage(`#\u5F02\u5E38\u8BBF\u95EE ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
 \u57DF\u540D: ${url.hostname}
@@ -75,140 +72,82 @@ var worker_default = {
         }
       });
     } else {
-      // 【修改 1C】更新 KV Key
-      const KV_KEY = `LINK.${subKey}.txt`; // <--- 使用 subKey 作为 KV Key 的一部分
+      const KV_KEY = `LINK.${subKey}.txt`;
       if (env.KV) {
-        await \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, "LINK.txt", KV_KEY); // 从旧的 "LINK.txt" 迁移
+        await \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, "LINK.txt", KV_KEY);
         if (userAgent.includes("mozilla") && !url.search) {
           await sendMessage(`#\u7F16\u8F91\u8BA2\u9605 ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
 \u57DF\u540D: ${url.hostname}
 <tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`);
-          return await KV(request, env, KV_KEY, \u8BBF\u5BA2\u8BA2\u9605); // <--- 传入新的 KV Key
+          return await KV(request, env, KV_KEY, \u8BBF\u5BA2\u8BA2\u9605);
         } else {
-          MainData = await env.KV.get(KV_KEY) || MainData; // <--- 使用新的 KV Key 读取数据
+          MainData = await env.KV.get(KV_KEY) || MainData;
         }
       } else {
         MainData = env.LINK || MainData;
         if (env.LINKSUB) urls = await ADD(env.LINKSUB);
       }
-      let \u91CD\u65B0\u6C47\u603B\u6240\u6709\u94FE\u63A5 = await ADD(MainData + "\n" + urls.join("\n"));
-      let \u81EA\u5EFA\u8282\u70B9 = "";
-      let \u8BA2\u9605\u94FE\u63A5 = "";
-      for (let x of \u91CD\u65B0\u6C47\u603B\u6240\u6709\u94FE\u63A5) {
-        if (x.toLowerCase().startsWith("http")) {
-          \u8BA2\u9605\u94FE\u63A5 += x + "\n";
-        } else {
-          \u81EA\u5EFA\u8282\u70B9 += x + "\n";
+      
+      // 【修改】将所有链接（包括MainData和urls）合并为一个大的url参数
+      const allLinks = (await ADD(MainData + "\n" + urls.join("\n"))).filter(link => link.trim() !== "");
+      const combinedUrl = allLinks.join("|");
+
+      let targetClient = "clash"; // 默认转换成clash
+      if (url.searchParams.has("b64") || url.searchParams.has("base64")) {
+        targetClient = "mixed"; // 如果是b64，则使用mixed，让subconverter返回base64
+      } else if (url.searchParams.has("clash")) {
+        targetClient = "clash";
+      } else if (url.searchParams.has("singbox") || url.searchParams.has("sb")) {
+        targetClient = "singbox";
+      } else if (url.searchParams.has("surge")) {
+        targetClient = "surge&ver=4";
+      } else if (url.searchParams.has("quanx")) {
+        targetClient = "quanx";
+      } else if (url.searchParams.has("loon")) {
+        targetClient = "loon";
+      } else if (userAgent.includes("clash")) {
+        targetClient = "clash";
+      } else if (userAgent.includes("sing-box") || userAgent.includes("singbox")) {
+        targetClient = "singbox";
+      } else if (userAgent.includes("surge")) {
+        targetClient = "surge&ver=4";
+      } else if (userAgent.includes("quantumult")) {
+        targetClient = "quanx";
+      } else if (userAgent.includes("loon")) {
+        targetClient = "loon";
+      } else {
+        targetClient = "mixed"; // 默认或无法识别时，返回base64
+      }
+
+      // 【修改】构造指向subconverter的最终URL
+      let finalSubUrl = `${subProtocol}://${subConverter}/sub?target=${targetClient}&url=${encodeURIComponent(combinedUrl)}&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
+      
+      // 传递其他高级参数
+      if (url.searchParams.get("exclude")) finalSubUrl += "&exclude=" + url.searchParams.get("exclude");
+      if (url.searchParams.get("include")) finalSubUrl += "&include=" + url.searchParams.get("include");
+      if (url.searchParams.get("filename")) finalSubUrl += "&filename=" + url.searchParams.get("filename");
+      if (url.searchParams.get("rename")) finalSubUrl += "&rename=" + url.searchParams.get("rename");
+      // ... 其他你希望透传的参数
+
+      console.log("Final Subconverter URL:", finalSubUrl);
+
+      // 【修改】直接请求最终的subconverter链接
+      const response = await fetch(finalSubUrl, {
+        headers: {
+          "User-Agent": userAgentHeader
         }
-      }
-      MainData = \u81EA\u5EFA\u8282\u70B9;
-      urls = await ADD(\u8BA2\u9605\u94FE\u63A5);
-      await sendMessage(`#\u83B7\u53D6\u8BA2\u9605 ${FileName}`, request.headers.get("CF-Connecting-IP"), `UA: ${userAgentHeader}</tg-spoiler>
-\u57DF\u540D: ${url.hostname}
-<tg-spoiler>\u5165\u53E3: ${url.pathname + url.search}</tg-spoiler>`);
-      const isSubConverterRequest = request.headers.get("subconverter-request") || request.headers.get("subconverter-version") || userAgent.includes("subconverter");
-      let \u8BA2\u9605\u683C\u5F0F = "base64";
-      if (!(userAgent.includes("null") || isSubConverterRequest || userAgent.includes("nekobox") || userAgent.includes("CF-Workers-SUB".toLowerCase()))) {
-        if (userAgent.includes("sing-box") || userAgent.includes("singbox") || url.searchParams.has("sb") || url.searchParams.has("singbox")) {
-          \u8BA2\u9605\u683C\u5F0F = "singbox";
-        } else if (userAgent.includes("surge") || url.searchParams.has("surge")) {
-          \u8BA2\u9605\u683C\u5F0F = "surge";
-        } else if (userAgent.includes("quantumult") || url.searchParams.has("quanx")) {
-          \u8BA2\u9605\u683C\u5F0F = "quanx";
-        } else if (userAgent.includes("loon") || url.searchParams.has("loon")) {
-          \u8BA2\u9605\u683C\u5F0F = "loon";
-        } else if (userAgent.includes("clash") || userAgent.includes("meta") || userAgent.includes("mihomo") || url.searchParams.has("clash")) {
-          \u8BA2\u9605\u683C\u5F0F = "clash";
-        }
-      }
-      let subConverterUrl;
-      let \u8BA2\u9605\u8F6C\u6362URL = `${url.origin}/${await MD5MD5(fakeToken)}?token=${fakeToken}`;
-      let req_data = MainData;
-      let \u8FFD\u52A0UA = "v2rayn";
-      if (url.searchParams.has("b64") || url.searchParams.has("base64")) \u8BA2\u9605\u683C\u5F0F = "base64";
-      else if (url.searchParams.has("clash")) \u8FFD\u52A0UA = "clash";
-      else if (url.searchParams.has("singbox")) \u8FFD\u52A0UA = "singbox";
-      else if (url.searchParams.has("surge")) \u8FFD\u52A0UA = "surge";
-      else if (url.searchParams.has("quanx")) \u8FFD\u52A0UA = "Quantumult%20X";
-      else if (url.searchParams.has("loon")) \u8FFD\u52A0UA = "Loon";
-      const \u8BA2\u9605\u94FE\u63A5\u6570\u7EC4 = [...new Set(urls)].filter((item) => item?.trim?.());
-      if (\u8BA2\u9605\u94FE\u63A5\u6570\u7EC4.length > 0) {
-        const \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9 = await getSUB(\u8BA2\u9605\u94FE\u63A5\u6570\u7EC4, request, \u8FFD\u52A0UA, userAgentHeader);
-        console.log(\u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9);
-        req_data += \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[0].join("\n");
-        \u8BA2\u9605\u8F6C\u6362URL += "|" + \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1];
-        if (\u8BA2\u9605\u683C\u5F0F == "base64" && !isSubConverterRequest && \u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1].includes("://")) {
-          subConverterUrl = `${subProtocol}://${subConverter}/sub?target=mixed&url=${encodeURIComponent(\u8BF7\u6C42\u8BA2\u9605\u54CD\u5E94\u5185\u5BB9[1])}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-          try {
-            const subConverterResponse = await fetch(subConverterUrl, { headers: { "User-Agent": "v2rayN/CF-Workers-SUB  (https://github.com/cmliu/CF-Workers-SUB)" } });
-            if (subConverterResponse.ok) {
-              const subConverterContent = await subConverterResponse.text();
-              req_data += "\n" + atob(subConverterContent);
-            }
-          } catch (error) {
-            console.log("\u8BA2\u9605\u8F6C\u6362\u8BF7\u56DEbase64\u5931\u8D25\uFF0C\u68C0\u67E5\u8BA2\u9605\u8F6C\u6362\u540E\u7AEF\u662F\u5426\u6B63\u5E38\u8FD0\u884C");
-          }
-        }
-      }
-      if (env.WARP) \u8BA2\u9605\u8F6C\u6362URL += "|" + (await ADD(env.WARP)).join("|");
-      const utf8Encoder = new TextEncoder();
-      const encodedData = utf8Encoder.encode(req_data);
-      const utf8Decoder = new TextDecoder();
-      const text = utf8Decoder.decode(encodedData);
-      const uniqueLines = new Set(text.split("\n"));
-      const result = [...uniqueLines].join("\n");
-      let base64Data;
-      try {
-        base64Data = btoa(result);
-      } catch (e) {
-        let encodeBase64 = function(data) {
-          const binary = new TextEncoder().encode(data);
-          let base64 = "";
-          const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-          for (let i = 0; i < binary.length; i += 3) {
-            const byte1 = binary[i];
-            const byte2 = binary[i + 1] || 0;
-            const byte3 = binary[i + 2] || 0;
-            base64 += chars[byte1 >> 2];
-            base64 += chars[(byte1 & 3) << 4 | byte2 >> 4];
-            base64 += chars[(byte2 & 15) << 2 | byte3 >> 6];
-            base64 += chars[byte3 & 63];
-          }
-          const padding = 3 - (binary.length % 3 || 3);
-          return base64.slice(0, base64.length - padding) + "==".slice(0, padding);
-        };
-        __name(encodeBase64, "encodeBase64");
-        base64Data = encodeBase64(result);
-      }
-      const responseHeaders = {
-        "content-type": "text/plain; charset=utf-8",
-        "Profile-Update-Interval": `${SUBUpdateTime}`,
-        "Profile-web-page-url": request.url.includes("?") ? request.url.split("?")[0] : request.url
-        //"Subscription-Userinfo": `upload=${UD}; download=${UD}; total=${total}; expire=${expire}`,
-      };
-      if (\u8BA2\u9605\u683C\u5F0F == "base64" || token == fakeToken) {
-        return new Response(base64Data, { headers: responseHeaders });
-      } else if (\u8BA2\u9605\u683C\u5F0F == "clash") {
-        subConverterUrl = `${subProtocol}://${subConverter}/sub?target=clash&url=${encodeURIComponent(\u8BA2\u9605\u8F6C\u6362URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-      } else if (\u8BA2\u9605\u683C\u5F0F == "singbox") {
-        subConverterUrl = `${subProtocol}://${subConverter}/sub?target=singbox&url=${encodeURIComponent(\u8BA2\u9605\u8F6C\u6362URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-      } else if (\u8BA2\u9605\u683C\u5F0F == "surge") {
-        subConverterUrl = `${subProtocol}://${subConverter}/sub?target=surge&ver=4&url=${encodeURIComponent(\u8BA2\u9605\u8F6C\u6362URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&new_name=true`;
-      } else if (\u8BA2\u9605\u683C\u5F0F == "quanx") {
-        subConverterUrl = `${subProtocol}://${subConverter}/sub?target=quanx&url=${encodeURIComponent(\u8BA2\u9605\u8F6C\u6362URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false&udp=true`;
-      } else if (\u8BA2\u9605\u683C\u5F0F == "loon") {
-        subConverterUrl = `${subProtocol}://${subConverter}/sub?target=loon&url=${encodeURIComponent(\u8BA2\u9605\u8F6C\u6362URL)}&insert=false&config=${encodeURIComponent(subConfig)}&emoji=true&list=false&tfo=false&scv=true&fdn=false&sort=false`;
-      }
-      try {
-        const subConverterResponse = await fetch(subConverterUrl, { headers: { "User-Agent": userAgentHeader } });
-        if (!subConverterResponse.ok) return new Response(base64Data, { headers: responseHeaders });
-        let subConverterContent = await subConverterResponse.text();
-        if (\u8BA2\u9605\u683C\u5F0F == "clash") subConverterContent = await clashFix(subConverterContent);
-        if (!userAgent.includes("mozilla")) responseHeaders["Content-Disposition"] = `attachment; filename*=utf-8''${encodeURIComponent(FileName)}`;
-        return new Response(subConverterContent, { headers: responseHeaders });
-      } catch (error) {
-        return new Response(base64Data, { headers: responseHeaders });
-      }
+      });
+
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set("content-disposition", `attachment; filename*=utf-8''${encodeURIComponent(FileName)}`);
+      newHeaders.set("profile-update-interval", `${SUBUpdateTime}`);
+      newHeaders.set("profile-web-page-url", request.url);
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
     }
   }
 };
@@ -298,153 +237,6 @@ async function MD5MD5(text) {
   return secondHex.toLowerCase();
 }
 __name(MD5MD5, "MD5MD5");
-function clashFix(content) {
-  if (content.includes("wireguard") && !content.includes("remote-dns-resolve")) {
-    let lines;
-    if (content.includes("\r\n")) {
-      lines = content.split("\r\n");
-    } else {
-      lines = content.split("\n");
-    }
-    let result = "";
-    for (let line of lines) {
-      if (line.includes("type: wireguard")) {
-        const \u5907\u6539\u5185\u5BB9 = `, mtu: 1280, udp: true`;
-        const \u6B63\u786E\u5185\u5BB9 = `, mtu: 1280, remote-dns-resolve: true, udp: true`;
-        result += line.replace(new RegExp(\u5907\u6539\u5185\u5BB9, "g"), \u6B63\u786E\u5185\u5BB9) + "\n";
-      } else {
-        result += line + "\n";
-      }
-    }
-    content = result;
-  }
-  return content;
-}
-__name(clashFix, "clashFix");
-async function proxyURL(proxyURL2, url) {
-  const URLs = await ADD(proxyURL2);
-  const fullURL = URLs[Math.floor(Math.random() * URLs.length)];
-  let parsedURL = new URL(fullURL);
-  console.log(parsedURL);
-  let URLProtocol = parsedURL.protocol.slice(0, -1) || "https";
-  let URLHostname = parsedURL.hostname;
-  let URLPathname = parsedURL.pathname;
-  let URLSearch = parsedURL.search;
-  if (URLPathname.charAt(URLPathname.length - 1) == "/") {
-    URLPathname = URLPathname.slice(0, -1);
-  }
-  URLPathname += url.pathname;
-  let newURL = `${URLProtocol}://${URLHostname}${URLPathname}${URLSearch}`;
-  let response = await fetch(newURL);
-  let newResponse = new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers
-  });
-  newResponse.headers.set("X-New-URL", newURL);
-  return newResponse;
-}
-__name(proxyURL, "proxyURL");
-async function getSUB(api, request, \u8FFD\u52A0UA, userAgentHeader) {
-  if (!api || api.length === 0) {
-    return [];
-  } else api = [...new Set(api)];
-  let newapi = "";
-  let \u8BA2\u9605\u8F6C\u6362URLs = "";
-  let \u5F02\u5E38\u8BA2\u9605 = "";
-  const controller = new AbortController();
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, 5000);
-  try {
-    const responses = await Promise.allSettled(api.map((apiUrl) => getUrl(request, apiUrl, \u8FFD\u52A0UA, userAgentHeader, controller.signal).then((response) => response.ok ? response.text() : Promise.reject(response))));
-    const modifiedResponses = responses.map((response, index) => {
-      if (response.status === "rejected") {
-        const reason = response.reason;
-        if (reason && reason.name === "AbortError") {
-          return {
-            status: "\u8D85\u65F6",
-            value: null,
-            apiUrl: api[index]
-            // 将原始的apiUrl添加到返回对象中
-          };
-        }
-        console.error(`\u8BF7\u6C42\u5931\u8D25: ${api[index]}, \u9519\u8BEF\u4FE1\u606F: ${reason.status} ${reason.statusText}`);
-        return {
-          status: "\u8BF7\u6C42\u5931\u8D25",
-          value: null,
-          apiUrl: api[index]
-          // 将原始的apiUrl添加到返回对象中
-        };
-      }
-      return {
-        status: response.status,
-        value: response.value,
-        apiUrl: api[index]
-        // 将原始的apiUrl添加到返回对象中
-      };
-    });
-    console.log(modifiedResponses);
-    for (const response of modifiedResponses) {
-      if (response.status === "fulfilled") {
-        const content = await response.value || "null";
-        console.log(`[DEBUG] Fetched ${response.apiUrl}: Length=${content.length}`);
-        if (content.includes("proxies:")) {
-          \u8BA2\u9605\u8F6C\u6362URLs += "|" + response.apiUrl;
-        } else if (content.includes('outbounds"') && content.includes('inbounds"')) {
-          \u8BA2\u9605\u8F6C\u6362URLs += "|" + response.apiUrl;
-        } else if (content.includes("://")) {
-          newapi += content + "\n";
-        } else if (isValidBase64(content)) {
-          newapi += base64Decode(content) + "\n";
-        } else {
-          const \u5F02\u5E38\u8BA2\u9605LINK = `trojan://CMLiussss@127.0.0.1:8888?security=tls&allowInsecure=1&type=tcp&headerType=none#%E5%BC%82%E5%B8%B8%E8%AE%A2%E9%98%85%20${response.apiUrl.split("://")[1].split("/")[0]}`;
-          console.log("\u5F02\u5E38\u8BA2\u9605: " + \u5F02\u5E38\u8BA2\u9605LINK);
-          \u5F02\u5E38\u8BA2\u9605 += `${\u5F02\u5E38\u8BA2\u9605LINK}
-`;
-        }
-      }
-    }
-  } catch (error) {
-    console.error(error);
-  } finally {
-    clearTimeout(timeout);
-  }
-  const \u8BA2\u9605\u5185\u5BB9 = await ADD(newapi + \u5F02\u5E38\u8BA2\u9605);
-  return [\u8BA2\u9605\u5185\u5BB9, \u8BA2\u9605\u8F6C\u6362URLs];
-}
-__name(getSUB, "getSUB");
-async function getUrl(request, targetUrl, \u8FFD\u52A0UA, userAgentHeader, signal) {
-  const newHeaders = new Headers(request.headers);
-  newHeaders.set("User-Agent", `${atob("djJyYXlOLzYuNDU=")} cmliu/CF-Workers-SUB ${\u8FFD\u52A0UA}(${userAgentHeader})`);
-  const modifiedRequest = new Request(targetUrl, {
-    method: request.method,
-    headers: newHeaders,
-    body: request.method === "GET" ? null : request.body,
-    redirect: "follow",
-    signal: signal,
-    cf: {
-      // 忽略SSL证书验证
-      insecureSkipVerify: true,
-      // 允许自签名证书
-      allowUntrusted: true,
-      // 禁用证书验证
-      validateCertificate: false
-    }
-  });
-  console.log(`\u8BF7\u6C42URL: ${targetUrl}`);
-  console.log(`\u8BF7\u6C42\u5934: ${JSON.stringify([...newHeaders])}`);
-  console.log(`\u8BF7\u6C42\u65B9\u6CD5: ${request.method}`);
-  console.log(`\u8BF7\u6C42\u4F53: ${request.method === "GET" ? null : request.body}`);
-  return fetch(modifiedRequest);
-}
-__name(getUrl, "getUrl");
-function isValidBase64(str) {
-  const cleanStr = str.replace(/\s/g, "");
-  const base64Regex = /^[A-Za-z0-9+/=\-_]+$/;
-  return base64Regex.test(cleanStr);
-}
-__name(isValidBase64, "isValidBase64");
 async function \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, oldKey, newKey) {
   const oldData = await env.KV.get(oldKey);
   const newData = await env.KV.get(newKey);
@@ -458,8 +250,8 @@ async function \u8FC1\u79FB\u5730\u5740\u5217\u8868(env, oldKey, newKey) {
 __name(\u8FC1\u79FB\u5730\u5740\u5217\u8868, "\u8FC1\u79FB\u5730\u5740\u5217\u8868");
 async function KV(request, env, txt, guest) {
   const url = new URL(request.url);
-  const mytoken = env.TOKEN || "auto"; // 【新增】获取 mytoken
-  const subKey = txt.split('.')[1] || 'main'; // 【新增】获取当前配置名
+  const mytoken = env.TOKEN || "auto";
+  const subKey = txt.split('.')[1] || 'main';
   try {
     if (request.method === "POST") {
       if (!env.KV) return new Response("\u672A\u7ED1\u5B9AKV\u7A7A\u95F4", { status: 400 });
@@ -478,7 +270,6 @@ async function KV(request, env, txt, guest) {
     if (hasKV) {
       try {
         content = await env.KV.get(txt) || "";
-        // 【新增】获取所有配置列表
         const list = await env.KV.list({ prefix: "LINK." });
         for (const key of list.keys) {
             const parts = key.name.split('.');
@@ -499,78 +290,32 @@ async function KV(request, env, txt, guest) {
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
           <style>
-						body {
-							margin: 0;
-							padding: 15px; /* \u8C03\u6574padding */
-							box-sizing: border-box;
-							font-size: 13px; /* \u8BBE\u7F6E\u5168\u5C40\u5B57\u4F53\u5927\u5C0F */
-						}
-						.editor-container {
-							width: 100%;
-							max-width: 100%;
-							margin: 0 auto;
-						}
-						.editor {
-							width: 100%;
-							height: 300px; /* \u8C03\u6574\u9AD8\u5EA6 */
-							margin: 15px 0; /* \u8C03\u6574margin */
-							padding: 10px; /* \u8C03\u6574padding */
-							box-sizing: border-box;
-							border: 1px solid #ccc;
-							border-radius: 4px;
-							font-size: 13px;
-							line-height: 1.5;
-							overflow-y: auto;
-							resize: none;
-						}
-						.save-container {
-							margin-top: 8px; /* \u8C03\u6574margin */
-							display: flex;
-							align-items: center;
-							gap: 10px; /* \u8C03\u6574gap */
-						}
-						.save-btn, .back-btn {
-							padding: 6px 15px; /* \u8C03\u6574padding */
-							color: white;
-							border: none;
-							border-radius: 4px;
-							cursor: pointer;
-						}
-						.save-btn {
-							background: #4CAF50;
-						}
-						.save-btn:hover {
-							background: #45a049;
-						}
-						.back-btn {
-							background: #666;
-						}
-						.back-btn:hover {
-							background: #555;
-						}
-						.save-status {
-							color: #666;
-						}
+						body { margin: 0; padding: 15px; box-sizing: border-box; font-size: 13px; }
+						.editor-container { width: 100%; max-width: 100%; margin: 0 auto; }
+						.editor { width: 100%; height: 300px; margin: 15px 0; padding: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; line-height: 1.5; overflow-y: auto; resize: none; }
+						.save-container { margin-top: 8px; display: flex; align-items: center; gap: 10px; }
+						.save-btn, .back-btn { padding: 6px 15px; color: white; border: none; border-radius: 4px; cursor: pointer; }
+						.save-btn { background: #4CAF50; }
+						.save-btn:hover { background: #45a049; }
+						.back-btn { background: #666; }
+						.back-btn:hover { background: #555; }
+						.save-status { color: #666; }
           </style>
           <script src="https://cdn.jsdelivr.net/npm/@keeex/qrcodejs-kx@1.0.2/qrcode.min.js"><\/script>
         </head>
         <body>
           ################################################################<br>
           Subscribe / sub \u8BA2\u9605\u5730\u5740, \u70B9\u51FB\u94FE\u63A5\u81EA\u52A8 <strong>\u590D\u5236\u8BA2\u9605\u94FE\u63A5</strong> \u5E76 <strong>\u751F\u6210\u8BA2\u9605\u4E8C\u7EF4\u7801</strong> <br>
-          
-          <!-- 【新增：当前配置名称显示】 -->
           ---------------------------------------------------------------<br>
           \u5F53\u524D\u914D\u7F6E\u540D\u79F0: 
           <input type="text" id="configNameInput" value="${subKey}" style="border: 1px solid #ccc; padding: 5px; width: 150px; display: inline-block;">
           <button class="back-btn" onclick="goToConfig()" style="display: inline-block; padding: 6px 15px; margin-left: 10px; background: #6a11cb; color: white;">\u8FDB\u5165\u914D\u7F6E</button>
           <br>
-          <!-- 【新增：已有配置列表】 -->
           <div id="configList" style="margin-top: 10px;">
               \u5DF2\u6709\u914D\u7F6E: 
               ${subKeyList.map(k => `<span onclick="setConfig('${k}')" style="cursor:pointer; color:blue; text-decoration:underline; margin-right:10px;">${k}</span>`).join('')}
           </div>
           ---------------------------------------------------------------<br>
-
           \u81EA\u9002\u5E94\u8BA2\u9605\u5730\u5740:<br>
           <a href="javascript:void(0)" onclick="copyToClipboard('https://${url.hostname}/${subKey}/${mytoken}?sub','qrcode_0')" style="color:blue;text-decoration:underline;cursor:pointer;">https://${url.hostname}/${subKey}/${mytoken}</a><br>
           <div id="qrcode_0" style="margin: 10px 10px 10px 10px;"></div>
@@ -646,26 +391,19 @@ async function KV(request, env, txt, guest) {
           const mytoken = '${mytoken}';
           function goToConfig() {
               const configName = document.getElementById('configNameInput').value;
-              const currentPath = window.location.pathname; // /main/wh898
-              const newToken = currentPath.split('/').pop(); // wh898
-              
-              // 构建新的 URL：https://hostname/HF/wh898
+              const currentPath = window.location.pathname;
+              const newToken = currentPath.split('/').pop();
               const newUrl = \`https://${url.hostname}/\${configName}/\${newToken}\`;
-              
-              // 如果配置名改变，则重定向到新的链接
               if (configName !== '${subKey}') {
                   window.location.href = newUrl;
               } else {
                   alert('\u914D\u7F6E\u540D\u79F0\u672A\u6539\u53D8\uFF0C\u65E0\u9700\u8FDB\u5165');
               }
           }
-          
-          // 【新增】点击配置名称时自动填充并跳转
           function setConfig(name) {
               document.getElementById('configNameInput').value = name;
               goToConfig();
           }
-          
           function copyToClipboard(text, qrcode) {
             navigator.clipboard.writeText(text).then(() => {
               alert('\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F');
@@ -676,52 +414,42 @@ async function KV(request, env, txt, guest) {
             qrcodeDiv.innerHTML = '';
             new QRCode(qrcodeDiv, {
               text: text,
-              width: 220, // \u8C03\u6574\u5BBD\u5EA6
-              height: 220, // \u8C03\u6574\u9AD8\u5EA6
-              colorDark: "#000000", // \u4E8C\u7EF4\u7801\u989C\u8272
-              colorLight: "#ffffff", // \u80CC\u666F\u989C\u8272
-              correctLevel: QRCode.CorrectLevel.Q, // \u8BBE\u7F6E\u7EA0\u9519\u7EA7\u522B
-              scale: 1 // \u8C03\u6574\u50CF\u7D20\u9897\u7C92\u5EA6
+              width: 220,
+              height: 220,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.Q,
+              scale: 1
             });
           }
-						
 					if (document.querySelector('.editor')) {
 						let timer;
 						const textarea = document.getElementById('content');
 						const originalContent = textarea.value;
-		
 						function goBack() {
 							const currentUrl = window.location.href;
 							const parentUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/'));
 							window.location.href = parentUrl;
 						}
-		
 						function replaceFullwidthColon() {
 							const text = textarea.value;
 							textarea.value = text.replace(/\uFF1A/g, ':');
 						}
-						
 						function saveContent(button) {
 							try {
 								const updateButtonText = (step) => {
 									button.textContent = \`\u4FDD\u5B58\u4E2D: \${step}\`;
 								};
-								// \u68C0\u6D4B\u662F\u5426\u4E3AiOS\u8BBE\u5907
 								const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-								
-								// \u4EC5\u5728\u975EiOS\u8BBE\u5907\u4E0A\u6267\u884CreplaceFullwidthColon
 								if (!isIOS) {
 									replaceFullwidthColon();
 								}
 								updateButtonText('\u5F00\u59CB\u4FDD\u5B58');
 								button.disabled = true;
-
-								// \u83B7\u53D6textarea\u5185\u5BB9\u548C\u539F\u59CB\u5185\u5BB9
 								const textarea = document.getElementById('content');
 								if (!textarea) {
 									throw new Error('\u627E\u4E0D\u5230\u6587\u672C\u7F16\u8F91\u533A\u57DF');
 								}
-
 								updateButtonText('\u83B7\u53D6\u5185\u5BB9');
 								let newContent;
 								let originalContent;
@@ -732,7 +460,6 @@ async function KV(request, env, txt, guest) {
 									console.error('\u83B7\u53D6\u5185\u5BB9\u9519\u8BEF:', e);
 									throw new Error('\u65E0\u6CD5\u83B7\u53D6\u7F16\u8F91\u5185\u5BB9');
 								}
-
 								updateButtonText('\u51C6\u5907\u72B6\u6001\u66F4\u65B0\u51FD\u6570');
 								const updateStatus = (message, isError = false) => {
 									const statusElem = document.getElementById('saveStatus');
@@ -741,23 +468,17 @@ async function KV(request, env, txt, guest) {
 										statusElem.style.color = isError ? 'red' : '#666';
 									}
 								};
-
 								updateButtonText('\u51C6\u5907\u6309\u94AE\u91CD\u7F6E\u51FD\u6570');
 								const resetButton = () => {
 									button.textContent = '\u4FDD\u5B58';
 									button.disabled = false;
 								};
-
                 if (newContent !== originalContent) {
                   updateButtonText('\u53D1\u9001\u4FDD\u5B58\u8BF7\u6C42');
                   button.disabled = true;
-
-                  // 【新增】获取新的配置名称
                   const newConfigName = document.getElementById('configNameInput').value;
-                  // 【新增】构建新的保存 URL：/配置名/Token
                   const newSaveUrl = \`https://${url.hostname}/\${newConfigName || 'main'}/\${mytoken}\`;
-                  
-                  fetch(newSaveUrl, { // <--- 【修改】使用新的 newSaveUrl
+                  fetch(newSaveUrl, {
                     method: 'POST',
                     body: newContent,
                     headers: {
@@ -799,14 +520,12 @@ async function KV(request, env, txt, guest) {
 								}
 							}
 						}
-		
 						textarea.addEventListener('blur', saveContent);
 						textarea.addEventListener('input', () => {
 							clearTimeout(timer);
 							timer = setTimeout(saveContent, 5000);
 						});
 					}
-
 					function toggleNotice() {
 						const noticeContent = document.getElementById('noticeContent');
 						const noticeToggle = document.getElementById('noticeToggle');
@@ -818,8 +537,6 @@ async function KV(request, env, txt, guest) {
 							noticeToggle.textContent = '\u67E5\u770B\u8BBF\u5BA2\u8BA2\u9605\u2228';
 						}
 					}
-			
-					// \u521D\u59CB\u5316 noticeContent \u7684 display \u5C5E\u6027
 					document.addEventListener('DOMContentLoaded', () => {
 						document.getElementById('noticeContent').style.display = 'none';
 					});
